@@ -1,0 +1,51 @@
+version: "3.8"
+
+services:
+  api:
+    build: ./src/api
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://user:password@database:5432/moderation_db
+      - REDIS_URL=redis://redis:6379
+      - RATE_LIMIT_PER_MINUTE=5
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  processor:
+    build: ./src/processor
+    environment:
+      - DATABASE_URL=postgresql://user:password@database:5432/moderation_db
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  database:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: moderation_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d moderation_db"]
+      interval: 5s
+      retries: 5
+
+  redis:
+    image: redis:6-alpine
+    healthcheck:
+      test: ["CMD","redis-cli","ping"]
+      interval: 5s
+      retries: 5
+
+volumes:
+  pg_data:
