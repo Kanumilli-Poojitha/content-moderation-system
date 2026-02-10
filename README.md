@@ -50,7 +50,6 @@ content-moderation-system/
 └── docs/
 └── postman_collection.json
 
-
 ---
 
 ## ⚙️ Setup & Run Instructions
@@ -124,29 +123,21 @@ Response:
 
 
 Errors:
-
 404 Not Found → Content not found
 
 🧪 Testing
 
 Unit tests for rate limiting logic
-
 Unit tests for moderation logic
-
 Integration tests for end-to-end workflow
-
 Postman collection included in docs/postman_collection.json
 
 🐳 Docker Compose Services
 
 api
-
 processor
-
 database (PostgreSQL)
-
 redis
-
 Health checks ensure correct startup order.
 
 🔐 Environment Variables
@@ -163,38 +154,48 @@ Detailed API documentation is available in:
 
 API_DOCS.md
 
-📸 Screenshots / Demo (Optional)
+## 📸 API Testing Screenshots
 
-Screenshots of Postman responses can be added here.
+### Submit Content (Success)
+![Submit Success](screenshots/submit_success.png)
+
+
+### Get Content Status (Approved)
+![Status Approved](screenshots/status_approved.png)
+
+### Get Content Status (Rejected)
+![Status Rejected](screenshots/rejected.png)
+
+### Invalid Input
+![Invalid Input](screenshots/invalid_input.png)
+
+### Rate Limit Exceeded
+![Rate Limit](screenshots/rate_limit.png)
+
+### Content Not Found
+![Not Found](screenshots/not_found.png)
+
+### Pytest Results
+![Pytest](screenshots/pytest_passed.png)
+
 
 ✅ Features Implemented
 
 Dynamic per-user rate limiting (Token Bucket style)
-
 Event-driven architecture using Redis Pub/Sub
-
 Asynchronous moderation processing
-
 Persistent storage with PostgreSQL
-
 Dockerized microservices
-
 Unit & integration testing
-
 Error handling and validation
 
 🚀 Future Improvements
 
 Authentication (API Key / JWT)
-
 Real ML-based moderation logic
-
 Retry mechanism in processor
-
 Circuit breaker
-
 Monitoring & metrics
 
 👩‍💻 Author
-
 Poojitha
