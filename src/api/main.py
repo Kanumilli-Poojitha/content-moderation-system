@@ -36,8 +36,16 @@ def submit_content(data: ContentRequest):
 
     return {"contentId": content_id}
 
+from uuid import UUID
+from fastapi import HTTPException
+
 @app.get("/api/v1/content/{content_id}/status")
 def get_status(content_id: str):
+    try:
+        UUID(content_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Content not found")
+
     cur = get_cursor()
     cur.execute(
         "SELECT status FROM moderation_results WHERE content_id=%s",
@@ -46,6 +54,6 @@ def get_status(content_id: str):
     row = cur.fetchone()
 
     if not row:
-        raise HTTPException(status_code=404, detail="Not found")
+        raise HTTPException(status_code=404, detail="Content not found")
 
     return {"contentId": content_id, "status": row[0]}
