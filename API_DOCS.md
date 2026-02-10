@@ -41,8 +41,9 @@ Content-Type: application/json
 }
 
 Field	Type	Required	Description
-text	string	Yes	Content to be moderated
-userId	string	Yes	Unique user identifier
+text	string	 Yes	      Content to be moderated
+userId	string	 Yes	      Unique user identifier
+
 Success Response
 
 Status Code: 202 Accepted
@@ -96,21 +97,15 @@ Each user is limited to a fixed number of requests per minute.
 Behavior:
 
 Rate limiting is applied per userId
-
 Excess requests return HTTP 429 Too Many Requests
-
 Event Processing
 
 When content is submitted:
 
 API stores the content with status PENDING
-
 Publishes a ContentSubmitted event to Redis
-
 Moderation Processor consumes the event
-
 Status is updated to APPROVED or REJECTED
-
 Processing is asynchronous.
 
 Example Workflow
@@ -154,7 +149,6 @@ Future Enhancements
 Authentication & Authorization
 
 Pagination for history endpoints
-
 Webhooks for moderation results
 ML-based moderation engine
 Monitoring and logging
