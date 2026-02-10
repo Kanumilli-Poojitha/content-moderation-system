@@ -46,9 +46,7 @@ content-moderation-system/
 ├── docker-compose.yml
 ├── .env.example
 ├── README.md
-├── API_DOCS.md
-└── docs/
-└── postman_collection.json
+└──API_DOCS.md
 
 ---
 
@@ -77,9 +75,7 @@ All services will start:
 API: http://localhost:8000
 
 PostgreSQL
-
 Redis
-
 Moderation Processor
 
 3️⃣ Run Tests
@@ -90,7 +86,6 @@ python -m pytest
 
 
 Expected output:
-
 4 passed in X.XXs
 
 🔌 API Endpoints
@@ -107,9 +102,7 @@ Request Body:
 Responses:
 
 202 Accepted → Content accepted
-
 400 Bad Request → Invalid input
-
 429 Too Many Requests → Rate limit exceeded
 
 GET /api/v1/content/{contentId}/status
@@ -130,7 +123,6 @@ Errors:
 Unit tests for rate limiting logic
 Unit tests for moderation logic
 Integration tests for end-to-end workflow
-Postman collection included in docs/postman_collection.json
 
 🐳 Docker Compose Services
 
@@ -153,6 +145,19 @@ RATE_LIMIT_PER_MINUTE=
 Detailed API documentation is available in:
 
 API_DOCS.md
+
+## 📬 Postman Testing
+
+All API endpoints were tested using Postman.  
+For this submission, request/response screenshots are provided in the `screenshots/` directory instead of a Postman collection export.
+
+These screenshots demonstrate successful and error scenarios including:
+- Valid content submission
+- Approved and rejected moderation results
+- Invalid input handling
+- Rate limiting behavior
+- Content not found errors
+
 
 ## 📸 API Testing Screenshots
 
