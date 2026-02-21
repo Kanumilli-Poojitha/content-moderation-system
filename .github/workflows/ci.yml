@@ -95,4 +95,6 @@ jobs:
           PY
 
       - name: Run tests
+        env:
+          PYTHONPATH: .
         run: pytest -q
