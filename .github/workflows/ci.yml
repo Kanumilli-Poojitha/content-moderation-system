@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      REDIS_URL: redis://localhost:6379
+      DATABASE_URL: postgresql://user:password@localhost:5432/moderation_db
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Build and start services
+        run: docker-compose up -d --build
+
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r src/api/requirements.txt
+          pip install -r src/processor/requirements.txt
+          pip install pytest requests redis
+
+      - name: Wait for services
+        run: |
+          python - <<'PY'
+          import time, os, sys
+          import requests
+          import redis
+
+          url = 'http://localhost:8000/health'
+          redis_url = os.environ.get('REDIS_URL')
+
+          for i in range(60):
+              ok = True
+              try:
+                  requests.get(url, timeout=1)
+              except Exception:
+                  ok = False
+              try:
+                  redis.Redis.from_url(redis_url).ping()
+              except Exception:
+                  ok = False
+              if ok:
+                  print('services ready')
+                  sys.exit(0)
+              time.sleep(2)
+          print('services not ready')
+          sys.exit(1)
+          PY
+
+      - name: Run tests
+        run: pytest -q
+
+      - name: Tear down
+        if: always()
+        run: docker-compose down -v
