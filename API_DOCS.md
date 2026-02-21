@@ -108,6 +108,12 @@ Moderation Processor consumes the event
 Status is updated to APPROVED or REJECTED
 Processing is asynchronous.
 
+Observability & Reliability
+
+- The services emit structured logs (INFO/DEBUG) for key events: submissions, rate-limiting hits, event publish/consume, and moderation results.
+- Database and Redis clients include retry/backoff logic controlled via environment variables (`DB_MAX_RETRIES`, `DB_RETRY_BACKOFF_SEC`, `REDIS_MAX_RETRIES`, `REDIS_RETRY_BACKOFF_SEC`).
+- For production deployments a centralized log collector (e.g., ELK/Datadog) is recommended.
+
 Example Workflow
 1. Submit Content
 POST /api/v1/content/submit
