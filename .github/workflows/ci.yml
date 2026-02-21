@@ -7,27 +7,10 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:13
-        env:
-          POSTGRES_DB: moderation_db
-          POSTGRES_USER: user
-          POSTGRES_PASSWORD: password
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd="pg_isready -U user -d moderation_db" --health-interval=5s --health-timeout=5s --health-retries=5
-      redis:
-        image: redis:6-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd="redis-cli ping" --health-interval=5s --health-timeout=5s --health-retries=5
-
+    
     env:
-      DATABASE_URL: postgresql://user:password@localhost:5432/moderation_db
-      REDIS_URL: redis://localhost:6379
+      DATABASE_URL: postgresql://user:password@database:5432/moderation_db
+      REDIS_URL: redis://redis:6379
 
     steps:
       - name: Checkout
@@ -38,68 +21,70 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install system deps (psql)
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Build and start services with Docker Compose
+        run: docker-compose up -d --build
 
-      - name: Install Python deps
+      - name: Install Python test deps
         run: |
           python -m pip install --upgrade pip
-          pip install -r src/api/requirements.txt
-          pip install -r src/processor/requirements.txt
           pip install pytest requests redis
 
-      - name: Initialize DB schema
-        run: |
-          # wait for Postgres to be ready
-          for i in {1..30}; do
-            pg_isready -h localhost -p 5432 -U user && break || sleep 1
-          done
-          PGPASSWORD=password psql -h localhost -U user -d moderation_db -f docker/init.sql
-
-      - name: Start API and Processor
-        run: |
-          # start API in background
-          cd src/api && nohup uvicorn main:app --host 0.0.0.0 --port 8000 > api.log 2>&1 &
-          # start processor in background (takes time to subscribe to Redis)
-          cd ../processor && nohup python processor.py > processor.log 2>&1 &
-          cd ../..
-          # give processor time to start and subscribe to Redis channel
-          sleep 3
-
-      - name: Wait for API and Redis readiness
+      - name: Wait for services to be healthy
         run: |
           python - <<'PY'
           import time, os, sys
           import requests
           import redis
 
-          url = 'http://localhost:8000/health'
-          redis_url = os.environ.get('REDIS_URL')
+          # Services are behind docker-compose network aliases (database, redis, api, processor)
+          # From host, connect to localhost since docker-compose exposes ports
+          api_url = 'http://localhost:8000/health'
+          redis_url = 'redis://localhost:6379'
 
-          # give processor a few more seconds to subscribe
-          for i in range(60):
-              ok = True
+          for attempt in range(60):
+              api_ok = False
+              redis_ok = False
+              
               try:
-                  r = requests.get(url, timeout=1)
-                  if r.status_code != 200:
-                      ok = False
-              except Exception:
-                  ok = False
+                  resp = requests.get(api_url, timeout=2)
+                  api_ok = (resp.status_code == 200)
+              except Exception as e:
+                  pass
+              
               try:
                   redis.Redis.from_url(redis_url).ping()
-              except Exception:
-                  ok = False
-              if ok:
-                  # Wait extra time for processor to fully subscribe
-                  time.sleep(2)
-                  print('services ready')
+                  redis_ok = True
+              except Exception as e:
+                  pass
+              
+              if api_ok and redis_ok:
+                  print('All services healthy')
+                  # Give processor extra time to subscribe to Redis channel
+                  time.sleep(3)
                   sys.exit(0)
+              
+              print(f'Waiting for services... (attempt {attempt+1}/60): API={api_ok}, Redis={redis_ok}')
               time.sleep(2)
-          print('services not ready')
+          
+          print('Services did not become healthy in time')
           sys.exit(1)
           PY
 
       - name: Run tests
         env:
           PYTHONPATH: .
-        run: pytest -q
+          DATABASE_URL: postgresql://user:password@localhost:5432/moderation_db
+          REDIS_URL: redis://localhost:6379
+        run: pytest -v
+
+      - name: Show service logs on failure
+        if: failure()
+        run: |
+          echo "=== API Logs ===" && docker-compose logs api || true
+          echo "=== Processor Logs ===" && docker-compose logs processor || true
+          echo "=== Redis Logs ===" && docker-compose logs redis || true
+          echo "=== Database Logs ===" && docker-compose logs database || true
+
+      - name: Tear down
+        if: always()
+        run: docker-compose down -v
