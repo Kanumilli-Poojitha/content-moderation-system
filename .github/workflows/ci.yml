@@ -7,9 +7,27 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_DB: moderation_db
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U user -d moderation_db" --health-interval=5s --health-timeout=5s --health-retries=5
+      redis:
+        image: redis:6-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping" --health-interval=5s --health-timeout=5s --health-retries=5
+
     env:
-      REDIS_URL: redis://localhost:6379
       DATABASE_URL: postgresql://user:password@localhost:5432/moderation_db
+      REDIS_URL: redis://localhost:6379
 
     steps:
       - name: Checkout
@@ -20,8 +38,8 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Build and start services
-        run: docker-compose up -d --build
+      - name: Install system deps (psql)
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
       - name: Install Python deps
         run: |
@@ -30,7 +48,23 @@ jobs:
           pip install -r src/processor/requirements.txt
           pip install pytest requests redis
 
-      - name: Wait for services
+      - name: Initialize DB schema
+        run: |
+          # wait for Postgres to be ready
+          for i in {1..30}; do
+            pg_isready -h localhost -p 5432 -U user && break || sleep 1
+          done
+          PGPASSWORD=password psql -h localhost -U user -d moderation_db -f docker/init.sql
+
+      - name: Start API and Processor
+        run: |
+          # start API in background
+          cd src/api && nohup uvicorn main:app --host 0.0.0.0 --port 8000 &
+          # start processor in background
+          cd ../processor && nohup python processor.py &
+          cd ../..
+
+      - name: Wait for API and Redis readiness
         run: |
           python - <<'PY'
           import time, os, sys
@@ -43,7 +77,9 @@ jobs:
           for i in range(60):
               ok = True
               try:
-                  requests.get(url, timeout=1)
+                  r = requests.get(url, timeout=1)
+                  if r.status_code != 200:
+                      ok = False
               except Exception:
                   ok = False
               try:
@@ -60,7 +96,3 @@ jobs:
 
       - name: Run tests
         run: pytest -q
-
-      - name: Tear down
-        if: always()
-        run: docker-compose down -v
