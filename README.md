@@ -134,11 +134,16 @@ Health checks ensure correct startup order.
 
 🔐 Environment Variables
 
-See .env.example:
+See .env.example for all environment variables. Key variables include:
 
-DATABASE_URL=
-REDIS_URL=
-RATE_LIMIT_PER_MINUTE=
+- `DATABASE_URL` — Postgres connection string
+- `REDIS_URL` — Redis connection string
+- `RATE_LIMIT_PER_MINUTE` — Per-user rate limit
+- `DB_MAX_RETRIES` — Number of connection retry attempts for Postgres (default 5)
+- `DB_RETRY_BACKOFF_SEC` — Base backoff seconds for Postgres retry (default 1.0)
+- `REDIS_MAX_RETRIES` — Number of connection retry attempts for Redis (default 5)
+- `REDIS_RETRY_BACKOFF_SEC` — Base backoff seconds for Redis retry (default 0.5)
+- `LOG_LEVEL` — Logging level (e.g., INFO, DEBUG)
 
 📑 API Documentation
 
@@ -193,6 +198,7 @@ Persistent storage with PostgreSQL
 Dockerized microservices
 Unit & integration testing
 Error handling and validation
+Retry/backoff and logging for DB and Redis connections
 
 🚀 Future Improvements
 
