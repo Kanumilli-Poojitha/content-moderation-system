@@ -59,10 +59,12 @@ jobs:
       - name: Start API and Processor
         run: |
           # start API in background
-          cd src/api && nohup uvicorn main:app --host 0.0.0.0 --port 8000 &
-          # start processor in background
-          cd ../processor && nohup python processor.py &
+          cd src/api && nohup uvicorn main:app --host 0.0.0.0 --port 8000 > api.log 2>&1 &
+          # start processor in background (takes time to subscribe to Redis)
+          cd ../processor && nohup python processor.py > processor.log 2>&1 &
           cd ../..
+          # give processor time to start and subscribe to Redis channel
+          sleep 3
 
       - name: Wait for API and Redis readiness
         run: |
@@ -74,6 +76,7 @@ jobs:
           url = 'http://localhost:8000/health'
           redis_url = os.environ.get('REDIS_URL')
 
+          # give processor a few more seconds to subscribe
           for i in range(60):
               ok = True
               try:
@@ -87,6 +90,8 @@ jobs:
               except Exception:
                   ok = False
               if ok:
+                  # Wait extra time for processor to fully subscribe
+                  time.sleep(2)
                   print('services ready')
                   sys.exit(0)
               time.sleep(2)

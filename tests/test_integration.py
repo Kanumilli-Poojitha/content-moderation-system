@@ -4,6 +4,10 @@ import time
 BASE_URL = "http://localhost:8000"
 
 def test_full_content_flow():
+    # Give processor time to subscribe to Redis channel before first message is published
+    # (Redis Pub/Sub is not durable, so if processor subscribes after publish, message is lost)
+    time.sleep(2)
+    
     payload = {
         "text": "integration test content",
         "userId": "integration_user"
@@ -30,9 +34,9 @@ def test_full_content_flow():
     assert status_body["contentId"] == content_id
     assert status_body["status"] in ["PENDING", "APPROVED", "REJECTED"]
 
-    # Poll for processor to update status (up to 15 seconds)
-    # Processor may take time to subscribe and process in CI
-    max_wait = 15
+    # Poll for processor to update status (up to 30 seconds)
+    # Processor may take time to subscribe and process in CI; CI containers are slower
+    max_wait = 30
     start = time.time()
     final_status = "PENDING"
     while time.time() - start < max_wait:
