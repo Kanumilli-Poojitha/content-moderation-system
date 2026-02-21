@@ -30,15 +30,23 @@ def test_full_content_flow():
     assert status_body["contentId"] == content_id
     assert status_body["status"] in ["PENDING", "APPROVED", "REJECTED"]
 
-    # Wait for processor to potentially update status
-    time.sleep(3)
+    # Poll for processor to update status (up to 15 seconds)
+    # Processor may take time to subscribe and process in CI
+    max_wait = 15
+    start = time.time()
+    final_status = "PENDING"
+    while time.time() - start < max_wait:
+        final_response = requests.get(f"{BASE_URL}/api/v1/content/{content_id}/status")
+        assert final_response.status_code == 200
 
-    # Check again and assert final payload shape and status
-    final_response = requests.get(f"{BASE_URL}/api/v1/content/{content_id}/status")
-    assert final_response.status_code == 200
+        final_body = final_response.json()
+        assert isinstance(final_body, dict)
+        assert set(final_body.keys()) == {"contentId", "status"}
+        assert final_body["contentId"] == content_id
+        final_status = final_body["status"]
 
-    final_body = final_response.json()
-    assert isinstance(final_body, dict)
-    assert set(final_body.keys()) == {"contentId", "status"}
-    assert final_body["contentId"] == content_id
-    assert final_body["status"] in ["APPROVED", "REJECTED"]
+        if final_status in ["APPROVED", "REJECTED"]:
+            break
+        time.sleep(1)
+
+    assert final_status in ["APPROVED", "REJECTED"], f"Status is still {final_status} after {max_wait}s"
