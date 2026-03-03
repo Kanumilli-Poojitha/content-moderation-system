@@ -65,28 +65,46 @@ content-moderation-system/
 ```bash
 git clone https://github.com/<your-username>/content-moderation-system.git
 cd content-moderation-system
+```
 
-2️⃣ Start Services
-docker-compose up --build
+### 2️⃣ Start Services (Docker Compose)
 
+```bash
+docker-compose up --build -d
+```
 
 All services will start:
+- API: `http://localhost:8000`
+- PostgreSQL
+- Redis
+- Moderation Processor
 
-API: http://localhost:8000
+### 3️⃣ Run Tests Locally (Pytest)
 
-PostgreSQL
-Redis
-Moderation Processor
+Install test dependencies:
 
-3️⃣ Run Tests
+```bash
+python -m pip install --upgrade pip
+pip install pytest requests redis
+```
 
-In a new terminal:
+Run all tests:
 
-python -m pytest
+```bash
+python -m pytest -q
+```
 
+Run only integration tests:
 
-Expected output:
-4 passed in X.XXs
+```bash
+python -m pytest tests/test_integration.py tests/test_redis_pubsub.py -q
+```
+
+Optional cleanup after tests:
+
+```bash
+docker-compose down -v
+```
 
 🔌 API Endpoints
 POST /api/v1/content/submit
