@@ -226,5 +226,26 @@ Retry mechanism in processor
 Circuit breaker
 Monitoring & metrics
 
+Demo video:
+https://drive.google.com/file/d/1V_AW8uMeTpXeX421Mk8ZvgMQlVnKBG9d/view?usp=sharing
+
+Live video:
+https://drive.google.com/file/d/1G-YfgXMM9gHeKvEWG0jgtUDJJ7GEByoK/view?usp=sharing
+
+commands used for testing:
+docker-compose up --build -d
+
+docker-compose ps
+
+$payload = @{ text='Hello world'; userId='local_tester'} | ConvertTo-Json
+$response = Invoke-RestMethod -Method Post -Uri http://localhost:8000/api/v1/content/submit -Body $payload -ContentType 'application/json'
+$response
+
+$contentId = $response.contentId
+Invoke-RestMethod -Uri "http://localhost:8000/api/v1/content/$contentId/status"
+
+python -m pytest -q
+
 👩‍💻 Author
 Poojitha
+
